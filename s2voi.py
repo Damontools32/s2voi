@@ -1,5 +1,6 @@
 import os
 import asyncio
+import aiohttp
 from telethon import TelegramClient, events
 import yt_dlp
 
@@ -23,9 +24,26 @@ def download_video(url: str) -> str:
             return file
     return None
 
+async def upload_url(event, url: str):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status == 200:
+                file_name = url.split("/")[-1]
+                with open(file_name, "wb") as file:
+                    while True:
+                        chunk = await response.content.read(1024)
+                        if not chunk:
+                            break
+                        file.write(chunk)
+                await event.reply("در حال آپلود فایل...")
+                await client.send_file(event.chat_id, file_name, supports_streaming=True)
+                os.remove(file_name)
+            else:
+                await event.reply("مشکلی در دانلود فایل پیش آمده است.")
+
 @client.on(events.NewMessage(pattern='/start'))
 async def start(event):
-    await event.reply("لطفا لینک ویدیوی یوتیوب خود را بفرستید.")
+    await event.reply("لطفا لینک ویدیوی یوتیوب خود را بفرستید یا لینک مستقیم فایل را برای آپلود به تلگرام ارسال کنید.")
 
 @client.on(events.NewMessage)
 async def handle_url(event):
@@ -33,14 +51,18 @@ async def handle_url(event):
         return
 
     url = event.text
-    await event.reply("در حال دانلود ویدیو...")
 
-    video_path = download_video(url)
-    if video_path:
-        await client.send_file(event.chat_id, video_path, supports_streaming=True)
-        os.remove(video_path)
+    if "youtube.com" in url or "youtu.be" in url:
+        await event.reply("در حال دانلود ویدیو...")
+        video_path = download_video(url)
+        if video_path:
+            await client.send_file(event.chat_id, video_path, supports_streaming=True)
+            os.remove(video_path)
+        else:
+            await event.reply("مشکلی در دانلود ویدیو پیش آمده است.")
     else:
-        await event.reply("مشکلی در دانلود ویدیو پیش آمده است.")
+        await event.reply("در حال دانلود فایل...")
+        await upload_url(event, url)
 
 with client:
     client.run_until_disconnected()
