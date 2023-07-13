@@ -1,35 +1,46 @@
 import os
-import speech_recognition as sr
-from pyrogram import Client
+import asyncio
+from telethon import TelegramClient, events
+import yt_dlp
 
-# نصب TgCrypto
-os.system("pip install tgcrypto")  
+api_id = YOUR_API_ID
+api_hash = 'YOUR_API_HASH'
+bot_token = 'YOUR_TELEGRAM_BOT_TOKEN'
 
-api_id = 12345
-api_hash = 'your api hash'
-bot_token = 'bot token'
+client = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
 
-app = Client("my_bot", api_id, api_hash, bot_token=bot_token)
+def download_video(url: str) -> str:
+    ytdl_opts = {
+        "format": "bestvideo[height<=360]+bestaudio/best[height<=360]",
+        "outtmpl": "video.%(ext)s",
+    }
 
-@app.on_message()
-async def get_voice(client, message):
+    with yt_dlp.YoutubeDL(ytdl_opts) as ydl:
+        ydl.download([url])
 
-  if message.voice:
+    for file in os.listdir():
+        if file.startswith("video."):
+            return file
+    return None
 
-    # دریافت file_id
-    voice_note = message.voice.file_id
-    
-    # دانلود voice note
-    voice_note.download("voice.ogg")  
+@client.on(events.NewMessage(pattern='/start'))
+async def start(event):
+    await event.reply("لطفا لینک ویدیوی یوتیوب خود را بفرستید.")
 
-    os.system("ffmpeg -i voice.ogg voice.wav")
-        
-    r = sr.Recognizer()
-    with sr.AudioFile('voice.wav') as source:
-      audio = r.record(source)  
+@client.on(events.NewMessage)
+async def handle_url(event):
+    if event.text.startswith('/'):
+        return
 
-    text = r.recognize_google(audio, language='fa-IR')
-    
-    await app.send_message(message.chat.id, text)
-    
-app.run()
+    url = event.text
+    await event.reply("در حال دانلود ویدیو...")
+
+    video_path = download_video(url)
+    if video_path:
+        await client.send_file(event.chat_id, video_path, supports_streaming=True)
+        os.remove(video_path)
+    else:
+        await event.reply("مشکلی در دانلود ویدیو پیش آمده است.")
+
+with client:
+    client.run_until_disconnected()
