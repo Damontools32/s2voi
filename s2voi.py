@@ -1,26 +1,23 @@
-import logging
+import asyncio
 import requests
 
-from telegram import Update, Voice
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telethon import TelegramClient, events
 
 # جایگزین کردن توکن‌های مربوط به ربات تلگرام و Wit.ai
-TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
+API_ID = "YOUR_API_ID"
+API_HASH = "YOUR_API_HASH"
+BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
 WIT_AI_SERVER_ACCESS_TOKEN = "YOUR_WIT_AI_SERVER_ACCESS_TOKEN"
 
 
-def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text("سلام! لطفا ویس خود را بفرستید تا آن را به متن تبدیل کنم.")
-
-
-def voice_to_text(voice: Voice) -> str:
+async def voice_to_text(voice_file) -> str:
     api_url = "https://api.wit.ai/speech"
     headers = {
         "Content-Type": "audio/ogg; codecs=opus",
         "Authorization": f"Bearer {WIT_AI_SERVER_ACCESS_TOKEN}",
     }
 
-    response = requests.post(api_url, headers=headers, data=voice.get_file().download_as_bytearray())
+    response = requests.post(api_url, headers=headers, data=voice_file)
 
     if response.status_code == 200:
         result = response.json()
@@ -29,25 +26,26 @@ def voice_to_text(voice: Voice) -> str:
         raise Exception(f"Error: {response.text}")
 
 
-def handle_voice(update: Update, context: CallbackContext) -> None:
-    try:
-        text = voice_to_text(update.message.voice)
-        update.message.reply_text(f"متن شناسایی شده: {text}")
-    except Exception as e:
-        update.message.reply_text(f"مشکلی رخ داد: {e}")
+async def main():
+    client = TelegramClient("bot", API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
+    @client.on(events.NewMessage(pattern="/start"))
+    async def start_command_handler(event):
+        await event.reply("سلام! لطفا ویس خود را بفرستید تا آن را به متن تبدیل کنم.")
 
-def main() -> None:
-    logging.basicConfig(level=logging.INFO)
-    updater = Updater(TELEGRAM_BOT_TOKEN)
+    @client.on(events.NewMessage(func=lambda e: e.voice))
+    async def voice_message_handler(event):
+        voice = event.voice
+        voice_file = await client.download_file(voice)
 
-    dispatcher = updater.dispatcher
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(MessageHandler(Filters.voice, handle_voice))
+        try:
+            text = await voice_to_text(voice_file)
+            await event.reply(f"متن شناسایی شده: {text}")
+        except Exception as e:
+            await event.reply(f"مشکلی رخ داد: {e}")
 
-    updater.start_polling()
-    updater.idle()
+    await client.run_until_disconnected()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
