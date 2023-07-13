@@ -1,58 +1,25 @@
 import os
-import asyncio
-import logging
-import requests
+import speech_recognition as sr 
+from pyrogram import Client
 
-from telethon import TelegramClient, events
+api_id = 12345
+api_hash = 'your api hash'
+bot_token = '12345:YOUR_BOT_TOKEN' 
 
-# جایگزین کردن اطلاعات مربوط به کلاینت تلگرام و Wit.ai
-API_ID = YOUR_API_ID
-API_HASH = "YOUR_API_HASH"
-BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
-WIT_AI_SERVER_ACCESS_TOKEN = "YOUR_WIT_AI_SERVER_ACCESS_TOKEN"
+bot = Client("my_bot", api_id, api_hash, bot_token=bot_token)
 
+# دریافت ویس از کاربر
+message = bot.ask("لطفا یک پیام صوتی بفرستید")  
+voice_note = message.voice
+voice_note.download("voice.ogg")
+os.system("ffmpeg -i voice.ogg voice.wav")
 
-async def voice_to_text(file_path):
-    api_url = "https://api.wit.ai/speech"
-    headers = {
-        "Content-Type": "audio/ogg; codecs=opus",
-        "Authorization": f"Bearer {WIT_AI_SERVER_ACCESS_TOKEN}",
-        "lang": "fa",  # افزودن این خط برای تنظیم زبان به فارسی
-    }
+# تبدیل ویس به متن   
+r = sr.Recognizer()
+with sr.AudioFile('voice.wav') as source:
+    audio = r.record(source)
 
-    with open(file_path, "rb") as file:
-        response = requests.post(api_url, headers=headers, data=file.read())
+text = r.recognize_google(audio, language='fa-IR')
 
-    if response.status_code == 200:
-        result = response.json()
-        return result["text"]
-    else:
-        raise Exception(f"Error: {response.text}")
-
-
-async def main():
-    logging.basicConfig(level=logging.INFO)
-
-    client = TelegramClient("voice_bot", API_ID, API_HASH)
-    await client.start(bot_token=BOT_TOKEN)
-
-    @client.on(events.NewMessage(pattern="/start"))
-    async def start_handler(event):
-        await event.respond("سلام! لطفا ویس خود را بفرستید تا آن را به متن تبدیل کنم.")
-
-    @client.on(events.NewMessage)
-    async def voice_handler(event):
-        if event.message.voice:
-            try:
-                file_path = await event.message.download_media()
-                text = await voice_to_text(file_path)
-                os.remove(file_path)
-                await event.reply(f"متن شناسایی شده: {text}")
-            except Exception as e:
-                await event.reply(f"مشکلی رخ داد: {e}")
-
-    await client.run_until_disconnected()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+# ارسال متن به کاربر
+bot.send_message(message.chat.id, text)
