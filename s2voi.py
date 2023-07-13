@@ -17,6 +17,7 @@ async def voice_to_text(file_path):
     headers = {
         "Content-Type": "audio/ogg; codecs=opus",
         "Authorization": f"Bearer {WIT_AI_SERVER_ACCESS_TOKEN}",
+        "lang": "fa",  # افزودن این خط برای تنظیم زبان به فارسی
     }
 
     with open(file_path, "rb") as file:
