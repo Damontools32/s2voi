@@ -2,6 +2,8 @@ import os
 import asyncio
 from telethon import TelegramClient, events
 import yt_dlp
+from moviepy.editor import *
+from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 
 api_id = YOUR_API_ID
 api_hash = 'YOUR_API_HASH'
@@ -28,6 +30,14 @@ def download_video_and_thumbnail(url: str):
 
     return video_path, thumb_path
 
+def add_thumbnail_to_video(video_path, thumb_path):
+    video = VideoFileClip(video_path)
+    thumbnail = ImageClip(thumb_path, duration=video.duration)
+    final = CompositeVideoClip([thumbnail.set_opacity(0.6), video.set_opacity(0.4)])
+    final_path = "final_" + video_path
+    final.write_videofile(final_path, codec="libx264", audio_codec="aac")
+    return final_path
+
 @client.on(events.NewMessage(pattern='/start'))
 async def start(event):
     await event.reply("لطفا لینک ویدیوی یوتیوب خود را بفرستید.")
@@ -41,16 +51,16 @@ async def handle_url(event):
     await event.reply("در حال دانلود ویدیو...")
 
     video_path, thumb_path = download_video_and_thumbnail(url)
-    if video_path:
+    if video_path and thumb_path:
+        final_video_path = add_thumbnail_to_video(video_path, thumb_path)
         await client.send_file(
             event.chat_id,
-            video_path,
-            thumb=thumb_path if thumb_path else None,
+            final_video_path,
             supports_streaming=True,
         )
         os.remove(video_path)
-        if thumb_path:
-            os.remove(thumb_path)
+        os.remove(thumb_path)
+        os.remove(final_video_path)
     else:
         await event.reply("مشکلی در دانلود ویدیو پیش آمده است.")
 
