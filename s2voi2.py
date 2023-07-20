@@ -56,7 +56,7 @@ async def handle_url(client, message):
         await message.reply_text("در حال دانلود ویدیو...")
         video_path = download_video(url)
         if video_path:
-            await client.send_document(message.chat.id, video_path)
+            await client.send_video(message.chat.id, video_path)
             os.remove(video_path)
         else:
             await message.reply_text("مشکلی در دانلود ویدیو پیش آمده است.")
