@@ -1,5 +1,4 @@
 import os
-import asyncio
 import aiohttp
 from pyrogram import Client, filters
 import yt_dlp
@@ -45,9 +44,13 @@ async def upload_url(chat_id, url: str):
 async def start(client, message):
     await message.reply_text("لطفا لینک ویدیوی یوتیوب خود را بفرستید یا لینک مستقیم فایل را برای آپلود به تلگرام ارسال کنید.")
 
-@app.on_message(filters.text & ~filters.command)
+@app.on_message(filters.text)
 async def handle_url(client, message):
     url = message.text
+
+    # Ignore commands
+    if url.startswith('/'):
+        return
 
     if "youtube.com" in url or "youtu.be" in url:
         await message.reply_text("در حال دانلود ویدیو...")
