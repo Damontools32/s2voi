@@ -9,40 +9,29 @@ bot_token = 'YOUR_TELEGRAM_BOT_TOKEN'
 
 app = Client("bot", api_id, api_hash, bot_token=bot_token)
 
-def download_video(url: str) -> str:
+def download_video_and_thumbnail(url: str):
     ytdl_opts = {
-        "format": "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]",
+        "format": "bestvideo[height<=360][ext=webm]+bestaudio[ext=webm]/best[height<=360][ext=webm]",
         "outtmpl": "video.%(ext)s",
+        "writethumbnail": True
     }
 
     with yt_dlp.YoutubeDL(ytdl_opts) as ydl:
         ydl.download([url])
 
+    video_file = None
+    thumbnail_file = None
     for file in os.listdir():
         if file.startswith("video."):
-            return file
-    return None
+            video_file = file
+        elif file.endswith((".jpg", ".png")):
+            thumbnail_file = file
 
-async def upload_url(chat_id, url: str):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            if response.status == 200:
-                file_name = url.split("/")[-1]
-                with open(file_name, "wb") as file:
-                    while True:
-                        chunk = await response.content.read(1024)
-                        if not chunk:
-                            break
-                        file.write(chunk)
-                await app.send_message(chat_id, "در حال آپلود فایل...")
-                await app.send_document(chat_id, file_name)
-                os.remove(file_name)
-            else:
-                await app.send_message(chat_id, "مشکلی در دانلود فایل پیش آمده است.")
+    return video_file, thumbnail_file
 
 @app.on_message(filters.command("start"))
 async def start(client, message):
-    await message.reply_text("لطفا لینک ویدیوی یوتیوب خود را بفرستید یا لینک مستقیم فایل را برای آپلود به تلگرام ارسال کنید.")
+    await message.reply_text("لطفا لینک ویدیوی یوتیوب خود را بفرستید.")
 
 @app.on_message(filters.text)
 async def handle_url(client, message):
@@ -54,14 +43,14 @@ async def handle_url(client, message):
 
     if "youtube.com" in url or "youtu.be" in url:
         await message.reply_text("در حال دانلود ویدیو...")
-        video_path = download_video(url)
-        if video_path:
-            await client.send_video(message.chat.id, video_path)
-            os.remove(video_path)
+        video_file, thumbnail_file = download_video_and_thumbnail(url)
+        if video_file and thumbnail_file:
+            await client.send_video(message.chat.id, video_file, thumb=thumbnail_file)
+            if os.path.exists(video_file):
+                os.remove(video_file)
+            if os.path.exists(thumbnail_file):
+                os.remove(thumbnail_file)
         else:
-            await message.reply_text("مشکلی در دانلود ویدیو پیش آمده است.")
-    else:
-        await message.reply_text("در حال دانلود فایل...")
-        await upload_url(message.chat.id, url)
+            await message.reply_text("مشکلی در دانلود ویدیو یا تصویر شاخص پیش آمده است.")
 
 app.run()
