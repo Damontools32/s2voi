@@ -11,7 +11,7 @@ app = Client("bot", api_id, api_hash, bot_token=bot_token)
 
 def download_video(url: str) -> str:
     ytdl_opts = {
-        "format": "bestvideo[ext=mp4,height<=360]+bestaudio[ext=m4a]/best[ext=mp4,height<=360]",
+        "format": "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]",
         "outtmpl": "video.%(ext)s",
     }
 
