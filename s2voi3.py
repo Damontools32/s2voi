@@ -5,11 +5,11 @@ from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import SendMessageRequest
 
 # تنظیمات API تلگرام
-api_id = '20307428'
-api_hash = 'db1b2a38958c06bc4e99b01d4cfd485c'
+api_id = 'ggjj'
+api_hash = 'ghj'
 
 # تنظیمات توکن ربات تلگرام
-bot_token = '6242144866:AAE_l_3X2o6vqSo34qZz5k1u3lGngT70ovQ'
+bot_token = 'hkhgj'
 
 # تابع برای دانلود فایل از لینک گوگل درایو و ارسال آن به تلگرام
 async def process_google_drive_link(link):
