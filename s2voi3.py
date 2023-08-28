@@ -3,21 +3,22 @@ import os
 import gdown
 from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import SendMessageRequest
+from telethon.tl.functions.upload import UploadFileRequest
 
 # تنظیمات API تلگرام
-api_id = 'YOUR_API_ID'
-api_hash = 'YOUR_API_HASH'
+api_id = '20307428'
+api_hash = 'db1b2a38958c06bc4e99b01d4cfd485c'
 
 # تنظیمات توکن ربات تلگرام
-bot_token = 'YOUR_BOT_TOKEN'
+bot_token = '6242144866:AAE_l_3X2o6vqSo34qZz5k1u3lGngT70ovQ'
 
 # تابع برای دانلود فایل از لینک گوگل درایو و ارسال آن به تلگرام
 async def process_google_drive_link(link):
     # از انتهای لینک بین /d/ و /view را برداریم
     file_id = re.search(r"/d/(.*?)/view", link).group(1)
     
-    # دانلود فایل با استفاده از gdown
-    os.system(f"gdown {file_id}")
+    # اجرای دستور gdown بر روی لینک گوگل درایو در سرور
+    os.system(f"gdown {link}")
 
     # اتصال به API تلگرام
     client = TelegramClient('anon', api_id, api_hash)
@@ -25,13 +26,14 @@ async def process_google_drive_link(link):
 
     # آپلود فایل به تلگرام
     async with client.conversation('me') as conv:
-        await conv.send_file(f'{file_id}')
-
+        # آپلود فایل به تلگرام
+        await conv.send_file('downloaded_file')
+    
     # ارسال پیام به کاربر با اطلاعات دانلود
     await client.send_message('me', f'فایل از گوگل درایو با شناسه {file_id} دانلود شد و به تلگرام ارسال شد.')
 
     # پس از ارسال فایل به تلگرام، فایل محلی را حذف کنید
-    os.remove(f'{file_id}')
+    os.remove('downloaded_file')
 
 if __name__ == '__main__':
     import asyncio
