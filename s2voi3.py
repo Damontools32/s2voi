@@ -3,7 +3,6 @@ import os
 import gdown
 from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import SendMessageRequest
-from telethon.tl.functions.upload import UploadFileRequest
 
 # تنظیمات API تلگرام
 api_id = '20307428'
@@ -25,9 +24,7 @@ async def process_google_drive_link(link):
     await client.start(bot_token=bot_token)
 
     # آپلود فایل به تلگرام
-    async with client.conversation('me') as conv:
-        # آپلود فایل به تلگرام
-        await conv.send_file('downloaded_file')
+    await client.send_file('me', 'downloaded_file')
     
     # ارسال پیام به کاربر با اطلاعات دانلود
     await client.send_message('me', f'فایل از گوگل درایو با شناسه {file_id} دانلود شد و به تلگرام ارسال شد.')
