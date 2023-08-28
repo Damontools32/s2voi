@@ -1,76 +1,40 @@
+import re
 import os
-import asyncio
-import aiohttp
-from telethon import TelegramClient, events
-import yt_dlp
+import gdown
+from telethon.sync import TelegramClient
+from telethon.tl.functions.messages import SendMessageRequest
 
-api_id = YOUR_API_ID
+# تنظیمات API تلگرام
+api_id = 'YOUR_API_ID'
 api_hash = 'YOUR_API_HASH'
-bot_token = 'YOUR_TELEGRAM_BOT_TOKEN'
 
-client = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
+# تنظیمات توکن ربات تلگرام
+bot_token = 'YOUR_BOT_TOKEN'
 
-def download_video(url: str) -> str:
-    ytdl_opts = {
-        "format": "bestvideo[height<=360]+bestaudio/best[height<=360]",
-        "outtmpl": "video.%(ext)s",
-    }
+# تابع برای دانلود فایل از لینک گوگل درایو و ارسال آن به تلگرام
+async def process_google_drive_link(link):
+    # از انتهای لینک بین /d/ و /view را برداریم
+    file_id = re.search(r"/d/(.*?)/view", link).group(1)
+    
+    # دانلود فایل با استفاده از gdown
+    os.system(f"gdown {file_id}")
 
-    with yt_dlp.YoutubeDL(ytdl_opts) as ydl:
-        ydl.download([url])
+    # اتصال به API تلگرام
+    client = TelegramClient('anon', api_id, api_hash)
+    await client.start(bot_token=bot_token)
 
-    for file in os.listdir():
-        if file.startswith("video."):
-            return file
-    return None
+    # آپلود فایل به تلگرام
+    async with client.conversation('me') as conv:
+        await conv.send_file(f'{file_id}')
 
-async def upload_url(event, url: str):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            if response.status == 200:
-                file_name = url.split("/")[-1]
-                with open(file_name, "wb") as file:
-                    while True:
-                        chunk = await response.content.read(1024)
-                        if not chunk:
-                            break
-                        file.write(chunk)
-                try:                    
-                    await event.reply("نام جدید فایل را وارد کنید:")
-                    response = await client.wait_event(events.NewMessage(from_users=event.sender_id))
-                    new_file_name = response.text + '.' + file_name.split('.')[-1]
-                    os.rename(file_name, new_file_name)
-                    file_name = new_file_name
-                except Exception as e:
-                    await event.reply(f"خطا در تغییر نام فایل: {str(e)}")
-                await event.reply("در حال آپلود فایل...")
-                await client.send_file(event.chat_id, file_name, supports_streaming=True)
-                os.remove(file_name)
-            else:
-                await event.reply("مشکلی در دانلود فایل پیش آمده است.")
+    # ارسال پیام به کاربر با اطلاعات دانلود
+    await client.send_message('me', f'فایل از گوگل درایو با شناسه {file_id} دانلود شد و به تلگرام ارسال شد.')
 
-@client.on(events.NewMessage(pattern='/start'))
-async def start(event):
-    await event.reply("لطفا لینک ویدیوی یوتیوب خود را بفرستید یا لینک مستقیم فایل را برای آپلود به تلگرام ارسال کنید.")
+    # پس از ارسال فایل به تلگرام، فایل محلی را حذف کنید
+    os.remove(f'{file_id}')
 
-@client.on(events.NewMessage)
-async def handle_url(event):
-    if event.text.startswith('/'):
-        return
-
-    url = event.text
-
-    if "youtube.com" in url or "youtu.be" in url:
-        await event.reply("در حال دانلود ویدیو...")
-        video_path = download_video(url)
-        if video_path:
-            await client.send_file(event.chat_id, video_path, supports_streaming=True)
-            os.remove(video_path)
-        else:
-            await event.reply("مشکلی در دانلود ویدیو پیش آمده است.")
-    else:
-        await event.reply("در حال دانلود فایل...")
-        await upload_url(event, url)
-
-with client:
-    client.run_until_disconnected()
+if __name__ == '__main__':
+    import asyncio
+    loop = asyncio.get_event_loop()
+    link = input("لینک گوگل درایو را وارد کنید: ")
+    loop.run_until_complete(process_google_drive_link(link))
