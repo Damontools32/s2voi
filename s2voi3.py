@@ -1,7 +1,7 @@
 import os
 import asyncio
 import aiohttp
-from telethon import TelegramClient, events, Button
+from telethon import TelegramClient, events
 import yt_dlp
 
 api_id = YOUR_API_ID
@@ -37,7 +37,7 @@ async def upload_url(event, url: str):
                         file.write(chunk)
                 try:                    
                     await event.reply("نام جدید فایل را وارد کنید:")
-                    response = await client.wait_for(events.NewMessage(from_users=event.sender_id))
+                    response = await client.wait_event(events.NewMessage(from_users=event.sender_id))
                     new_file_name = response.text + '.' + file_name.split('.')[-1]
                     os.rename(file_name, new_file_name)
                     file_name = new_file_name
